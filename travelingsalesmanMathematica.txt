@@ -1,0 +1,100 @@
+(*******************************************)
+(* Elizabeth Wicks *)
+(* The following collection of functions give you problem space \
+information
+for the traveling salesman problem in an area divided by a river *)
+(*******************************************)
+
+
+(*******************************************)
+(* Assume there is a river dividing the land in two parts *)
+(* Given numCity and numBridge, we first create a graph for the \
+traveling salesman problem *)
+(* where the cities are equally divided over both sides of the river \
+and there are numBridge bridges *)
+(* and numCity cities *)
+(* The final output is the problem space graph for QUBO! You need \
+this to determine the cut vertices *)
+(* The adjacency matrix of this graph is the off diagonals of the \
+Hamiltonian q matrix (the b_ij) *)
+(*******************************************)
+MakeTravelingSalesmanGraph[numBridge_, numCity_] := ( 
+  (* creates traveling salesman graph *)
+  halfCity = Floor[numCity/2];
+  graph = 
+   GraphDisjointUnion[CompleteGraph[halfCity], 
+    CompleteGraph[numCity - halfCity]];
+  For[i = 1, i <= numBridge, i++,
+   graph = EdgeAdd[graph, i <-> halfCity + i];
+   ];
+  
+  (* creates problem space graph *)
+  (*probSpaceGraph=Graph[LineGraph[graph],VertexLabels \[Rule] 
+  Automatic]*)
+  probSpaceGraph = LineGraph[graph];
+  Return[probSpaceGraph];
+  )
+
+
+(*******************************************)
+(* Given a list of the distances between the vertices as well as the \
+problem space graph for traveling salesman, *)
+(* this outputs the Hamiltonian matrix *) 
+(* scale is the factor you multiply the main objective by to \
+distinguish it from the constraint *)
+(* Note that this matrix does not include the constant in the \
+Hamiltonian. The constant is 4*numCities, 
+where numCities is the number of cities in the original
+traveling salesman problem *)
+(*******************************************)
+HamiltonianMatrixTravelingSalesman[distList_, quboGraph_, scale_] := (
+  matr = AdjacencyMatrix[quboGraph];
+  For[i = 1, i <= Length[distList], i++,
+   matr[[i, i]] = (scale*distList[[i]] - 4);
+   ];
+  Return[matr];
+  )
+
+
+(*******************************************)
+(* This is the main function *)
+(* Return a Hamiltonian matrix ready to input into the QPU which \
+encodes
+the traveling salesman problem on numCity cities over a river which \
+divides
+the land into two parts, where numBridges bridges connect the two \
+parts *)
+(* This uses a random number generator to get distances between 0,1 \
+between all cities *)
+(* The scale is the constant multiplied times the actual objective to \
+put it and the constraint
+on the same order of magnitude *)
+(* For this reason, I might set the scale=4, but I'm not sure that's \
+the correct scale parameter. *)
+(* Need to use the above functions in order to use the following one *)
+
+(*******************************************)
+
+TravelingSalesman2[numBridge_, numCity_, scale_] := (
+  qubograph = MakeTravelingSalesmanGraph[numBridge, numCity];
+  vertex = VertexCount[qubograph];
+  distList1 = RandomReal[1, {1, vertex}];
+  distList2 = distList1[[1]];
+  HamiltonianMatrixTravelingSalesman[distList2, qubograph, scale]
+  )
+
+
+
+(*******************************************)
+(* Example: numBridge=10, numCity=22, scale = 4 *)
+(* The problem space graph has 113 vertices which we can separate \
+into two hardware size pieces *)
+(* The quantum computer has to be run 2^11 times *)
+(* We could add a lot more cities, I'm just not sure how big a \
+hardware sized chunk is *)
+(*******************************************)
+
+TravelingSalesman2[10, 22, 4]
+
+SparseArray[< 2500 >, {120, 120}]
+
