@@ -1,0 +1,92 @@
+def newH(graph,cutvert):
+    gnew=graph.copy()
+    clist=[]
+    for i in cutvert:
+        gnew.remove_node(i)
+    concom=nx.connected_components(gnew)
+    for i in concom:
+        clist.append(i)
+    t=len(clist)
+    finalList=[]
+    for r in range(t):
+        graph2=gnew.copy()
+        Hgraph=graph2.subgraph(clist[r])
+        H=nx.adjacency_matrix(Hgraph) #here is our "base" Hamiltonian
+        form=[-1 for l in range(len(cutvert))]
+        for ii in range(len(cutvert)):
+            if not(connects(graph,cutvert[ii],clist[r])):
+                form[ii]="*"
+        pos=makePos(form)
+        for p in pos:
+            ne=newHamiltonian(graph, p, cutvert,clist[r])
+            finalList.append([p,ne[0],ne[1]])
+    return finalList
+            
+        
+def newHamiltonian(graph1, p, cutvert, subset):
+    graph=graph1.copy()
+    H=nx.adjacency_matrix(graph).toarray()
+    constant=0
+    for w in range(len(p)):
+        if p[w]==1:
+            constant+=H[w][w]
+            for j in range(len(H)):
+                H[j][j]+=2*H[j][cutvert[w]]
+    reH=nx.from_numpy_matrix(H)
+    H2=nx.adjacency_matrix(reH.subgraph(subset))
+    return [constant,H2]
+
+def connects(graph1,checkVert, vertsInComp):
+    graph=graph1.copy()
+    cl=copy.copy(vertsInComp)
+    cl.add(checkVert)
+    for line in nx.generate_edgelist(graph.subgraph(cl), data=False):
+        if (checkVert==list(map(int,line.split()))[0] or checkVert==list(map(int,line.split()))[1]) and list(map(int,line.split()))[0] != list(map(int,line.split()))[1]:
+            return(True)
+    return False
+        
+def makePos(poslist):
+    poslista=[poslist]
+    for k in poslista:
+        end=True
+        i=0
+        while i<len(k) and end:            
+            if k[i]==-1:
+                k1=k[:]
+                k1[i]=0
+                poslista.append(k1)
+                k1=k[:]
+                k1[i]=1
+                poslista.append(k1)
+                end=False
+            i+=1
+    poslista=poslista[len(poslista)//2:]
+    return poslista
+
+def fakeQPU(FL):
+    newList=[]
+    for j in FL:
+        newList.append([j[0],j[1],random.uniform(-5,5)])
+    return newList
+
+def matchpattern(pat1,pat2):
+    for i in range(len(pat1)):
+        if pat1[i] !='*' and pat2[i]!=pat1[i]:
+            return False
+    return True
+    
+
+def findopt(nList,cutnumber):
+    comparelist=[]
+    for i in range(2**cutnumber):
+        pat=list(map(int,list(bin(i))[2:]))
+        pat=[0 for i in range(cutnumber-len(pat))]+pat
+        mini=0
+        for j in nList:
+            if matchpattern(j[0],pat):
+                mini+=j[1]+j[2]
+        comparelist.append(mini)
+    index=comparelist.index(min(comparelist))
+    return list(map(int,list(bin(index))[2:]))
+                
+        
